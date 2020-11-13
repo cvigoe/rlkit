@@ -10,10 +10,13 @@ from rlkit.torch.sac.sac import SACTrainer
 from rlkit.torch.networks import ConcatMlp
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
+import torch
+import gym
+import gym_activesearchrl
 
 def experiment(variant):
-    expl_env = NormalizedBoxEnv(HalfCheetahEnv())
-    eval_env = NormalizedBoxEnv(HalfCheetahEnv())
+    expl_env = NormalizedBoxEnv(gym.make('activesearchrl-v0'))
+    eval_env = NormalizedBoxEnv(gym.make('activesearchrl-v0'))
     obs_dim = expl_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
@@ -43,6 +46,14 @@ def experiment(variant):
         action_dim=action_dim,
         hidden_sizes=[M, M],
     )
+
+    # data = torch.load('/Users/conor/Documents/PHD_RESEARCH/ACTIVE_SEARCH_AS_RL/rlkit/data/tabular-active-search-k1/tabular_active_search_k1_2020_11_10_16_18_25_0000--s-0/params.pkl')
+    # qf1 = data['trainer/qf1']
+    # qf2 = data['trainer/qf2']
+    # target_qf1 = data['trainer/target_qf1']
+    # target_qf2 = data['trainer/target_qf2']
+    # policy = data['trainer/policy']
+
     eval_policy = MakeDeterministic(policy)
     eval_path_collector = MdpPathCollector(
         eval_env,
@@ -81,31 +92,30 @@ def experiment(variant):
 
 
 if __name__ == "__main__":
-    # noinspection PyTypeChecker
     variant = dict(
         algorithm="SAC",
         version="normal",
-        layer_size=256,
+        layer_size=64,
         replay_buffer_size=int(1E6),
         algorithm_kwargs=dict(
-            num_epochs=3000,
+            num_epochs=30000,
             num_eval_steps_per_epoch=5000,
             num_trains_per_train_loop=1000,
-            num_expl_steps_per_train_loop=1000,
-            min_num_steps_before_training=1000,
-            max_path_length=1000,
+            num_expl_steps_per_train_loop=2000,
+            min_num_steps_before_training=2000,
+            max_path_length=2000,
             batch_size=256,
         ),
         trainer_kwargs=dict(
             discount=0.99,
             soft_target_tau=5e-3,
             target_update_period=1,
-            policy_lr=3E-4,
-            qf_lr=3E-4,
+            policy_lr=3E-5,
+            qf_lr=3E-5,
             reward_scale=1,
             use_automatic_entropy_tuning=True,
         ),
     )
-    setup_logger('name-of-experiment', variant=variant)
+    setup_logger('tabular_active_search_k1_det', variant=variant)
     # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(variant)
