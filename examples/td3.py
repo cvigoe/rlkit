@@ -21,15 +21,24 @@ from rlkit.torch.td3.td3 import TD3Trainer
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 import gym
+import gym_activesearchrl
+import torch
 
 
 def experiment(variant):
-#    expl_env = NormalizedBoxEnv(HalfCheetahEnv())
-    expl_env = NormalizedBoxEnv(gym.make('Walker2d-v2'))
-#    eval_env = NormalizedBoxEnv(HalfCheetahEnv())
-    eval_env = NormalizedBoxEnv(gym.make('Walker2d-v2'))
+# #    expl_env = NormalizedBoxEnv(HalfCheetahEnv())
+#     expl_env = NormalizedBoxEnv(gym.make('Walker2d-v2'))
+# #    eval_env = NormalizedBoxEnv(HalfCheetahEnv())
+#     eval_env = NormalizedBoxEnv(gym.make('Walker2d-v2'))
+#     obs_dim = expl_env.observation_space.low.size
+#     action_dim = expl_env.action_space.low.size
+
+
+    expl_env = NormalizedBoxEnv(gym.make('activesearchrl-v0'))
+    eval_env = NormalizedBoxEnv(gym.make('activesearchrl-v0'))
     obs_dim = expl_env.observation_space.low.size
-    action_dim = expl_env.action_space.low.size
+    action_dim = eval_env.action_space.low.size
+
     qf1 = ConcatMlp(
         input_size=obs_dim + action_dim,
         output_size=1,
@@ -106,7 +115,7 @@ def experiment(variant):
 if __name__ == "__main__":
     variant = dict(
         algorithm_kwargs=dict(
-            num_epochs=3000,
+            num_epochs=30000,
             num_eval_steps_per_epoch=5000,
             num_trains_per_train_loop=1000,
             num_expl_steps_per_train_loop=1000,
@@ -126,5 +135,5 @@ if __name__ == "__main__":
         replay_buffer_size=int(1E6),
     )
     # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
-    setup_logger('rlkit-post-refactor-td3-half-cheetah', variant=variant)
+    setup_logger('tabular_active_search_k1_low_combo_if_0_01_coeff_td3', variant=variant)
     experiment(variant)

@@ -41,11 +41,28 @@ def experiment(variant):
         output_size=1,
         hidden_sizes=[M, M],
     )
-    policy = TanhGaussianPolicy(
+    # policy = TanhGaussianPolicy(
+    #     obs_dim=obs_dim,
+    #     action_dim=action_dim,
+    #     hidden_sizes=[M, M],
+    # )
+    policy1 = TanhGaussianPolicy(
         obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_sizes=[M, M],
     )
+    policy2 = TanhGaussianPolicy(
+        obs_dim=obs_dim,
+        action_dim=action_dim,
+        hidden_sizes=[M, M],
+    )    
+    w1 = torch.randn(1, requires_grad=True)
+    w2 = torch.randn(1, requires_grad=True)
+
+    p1 = torch.exp(w1)/ (torch.exp(w1) + torch.exp(w2))
+    p2 = torch.exp(w2)/ (torch.exp(w1) + torch.exp(w2))
+
+    policy = (p1 * policy1) + (p2 * policy2)
 
     # data = torch.load('/Users/conor/Documents/PHD_RESEARCH/ACTIVE_SEARCH_AS_RL/rlkit/data/tabular-active-search-k1/tabular_active_search_k1_2020_11_10_16_18_25_0000--s-0/params.pkl')
     # qf1 = data['trainer/qf1']
@@ -116,6 +133,6 @@ if __name__ == "__main__":
             use_automatic_entropy_tuning=True,
         ),
     )
-    setup_logger('tabular_active_search_k1_det', variant=variant)
+    setup_logger('tabular_active_search_k1_low_combo_if_0_01_coeff_gmm', variant=variant)
     # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(variant)

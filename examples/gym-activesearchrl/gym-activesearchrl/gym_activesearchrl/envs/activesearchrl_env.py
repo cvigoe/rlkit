@@ -67,7 +67,7 @@ class ActiveSearchRL(gym.Env):
           # for i in range(self.num_reward_samples):
           #     reward -= np.sqrt( np.mean( (self.b.sample() - self.beta_star)**2 ) )
           # reward /= self.num_reward_samples
-          done = self.timer > 20
+          done = self.timer > 100
           if done:
               map_est = self.b.sparse_vecs[np.argmax(self.b.prior)]
               print('\n')
@@ -89,7 +89,7 @@ class ActiveSearchRL(gym.Env):
           return np.asarray(self.b.representation()).flatten(), reward, done, {}
 
 class Belief():
-    def __init__(self,n=1,sigma=.00001,eta=2,num_representation_draws=100, lmbd=1, itr=100):
+    def __init__(self,n=1,sigma=.1,eta=2,num_representation_draws=100, lmbd=1, itr=100):
         self.X = []
         self.y = []
         self.n = n
@@ -160,15 +160,21 @@ class Belief():
     #             tauinv_vec[j] = invgauss.rvs(np.sqrt((self.sigma**2))*(self.lmbd**(1/3))/np.abs(beta[j]))*(self.lmbd**(2/3))
     #     return beta 
     def true_reward(self,beta):
+        # return int(np.all(self.sparse_vecs[np.argmax(self.prior)] == beta))
+
         expectation = 0
         for index, sparse_vec in enumerate(self.sparse_vecs):
             expectation += self.prior[index] * np.mean((sparse_vec - beta)**2)
-        return -1*expectation
+        if expectation < 0.01: # 0.02 chosen based on exploration mean rewards in logs for tabular_active_search_k1_2020_11_10_16_18_25_0000--s-0
+            full = int(np.all(self.sparse_vecs[np.argmax(self.prior)] == beta))
+        else:
+            full = 0
+        return (-1*expectation) + full*0.01
+
         # entropy = 0
         # for index, sparse_vec in enumerate(self.sparse_vecs):
         #     if self.prior[index] > 0:
         #         entropy -= self.prior[index] * np.log(self.prior[index])
-
         # return -1*entropy
 
 
