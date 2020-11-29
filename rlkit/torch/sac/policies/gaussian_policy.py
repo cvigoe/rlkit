@@ -129,6 +129,121 @@ class TanhGaussianPolicy(Mlp, TorchStochasticPolicy):
         return log_prob
 
 
+
+class TanhGaussianPolicyMM(Mlp, TorchStochasticPolicy):
+    """
+    Usage:
+
+    ```
+    policy = TanhGaussianPolicy(...)
+    """
+
+    def __init__(
+            self,
+            hidden_sizes,
+            obs_dim,
+            action_dim,
+            std=None,
+            init_w=1e-3,
+            **kwargs
+    ):
+        super().__init__(
+            hidden_sizes,
+            input_size=obs_dim,
+            output_size=action_dim,
+            init_w=init_w,
+            **kwargs
+        )
+        self.log_std = None
+        self.std = std
+        if std is None:
+            last_hidden_size = obs_dim
+            if len(hidden_sizes) > 0:
+                last_hidden_size = hidden_sizes[-1]
+            self.last_fc_log_std = nn.Linear(last_hidden_size, action_dim)
+            self.last_fc_log_std.weight.data.uniform_(-init_w, init_w)
+            self.last_fc_log_std.bias.data.uniform_(-init_w, init_w)
+        else:
+            self.log_std = np.log(std)
+            assert LOG_SIG_MIN <= self.log_std <= LOG_SIG_MAX
+
+        self.hidden_activation = nn.ReLU()
+
+        self.mean1_l1 = nn.Linear(obs_dim, hidden_sizes[-1])
+        self.mean1_l2 = nn.Linear(hidden_sizes[-1], hidden_sizes[-1])
+        self.mean1_out = nn.Linear(hidden_sizes[-1], action_dim)
+
+        self.mean2_l1 = nn.Linear(obs_dim, hidden_sizes[-1])
+        self.mean2_l2 = nn.Linear(hidden_sizes[-1], hidden_sizes[-1])
+        self.mean2_out = nn.Linear(hidden_sizes[-1], action_dim)
+
+        self.std1_l1 = nn.Linear(obs_dim, hidden_sizes[-1])
+        self.std1_l2 = nn.Linear(hidden_sizes[-1], hidden_sizes[-1])
+        self.std1_out = nn.Linear(hidden_sizes[-1], action_dim)
+
+        self.std2_l1 = nn.Linear(obs_dim, hidden_sizes[-1])
+        self.std2_l2 = nn.Linear(hidden_sizes[-1], hidden_sizes[-1])
+        self.std2_out = nn.Linear(hidden_sizes[-1], action_dim)
+
+        self.weights_l1 = nn.Linear(obs_dim, hidden_sizes[-1])
+        self.weights_l2 = nn.Linear(hidden_sizes[-1], hidden_sizes[-1])
+        self.weights_out = nn.Linear(hidden_sizes[-1], 2)
+
+        # need to initalise properly as per above
+        # need to ReLU properly
+
+    def forward(self, obs):
+        h = obs
+        
+        mean1 = self.mean1_l1(h)
+        mean1 = self.hidden_activation(mean1)
+        mean1 = self.mean1_l2(mean1)
+        mean1 = self.hidden_activation(mean1)
+        mean1 = self.mean1_out(mean1)
+
+        mean2 = self.mean2_l1(h)
+        mean2 = self.hidden_activation(mean1)
+        mean2 = self.mean2_l2(mean1)
+        mean2 = self.hidden_activation(mean1)
+        mean2 = self.mean2_out(mean1)
+
+        std1 = self.std1_l1(h)
+        std1 = self.hidden_activation(std1)
+        std1 = self.std1_l2(std1)
+        std1 = self.hidden_activation(std1)
+        std1 = self.std1_out(std1)
+        
+        std2 = self.std2_l1(h)
+        std2 = self.hidden_activation(std2)
+        std2 = self.std2_l2(std2)
+        std2 = self.hidden_activation(std2)
+        std2 = self.std2_out(std2)
+
+        weights = self.weights_l1(h)
+        weights = self.hidden_activation(weights)
+        weights = self.weights_l2(weights)
+        weights = self.hidden_activation(weights)
+        weights = self.weights_out(weights)
+
+        return GaussianMixture(torch.cat(mean1,mean2), torch.cat(std1,std2), weights)
+
+
+    def logprob(self, action, mean, std):
+        gmm = GMM(mean, std)
+        log_prob = gmm.log_prob(
+            action,
+        )
+        log_prob = log_prob.sum(dim=1, keepdim=True)
+        return log_prob
+
+
+
+
+
+
+
+
+
 class GaussianPolicy(Mlp, TorchStochasticPolicy):
     def __init__(
             self,
@@ -267,8 +382,8 @@ class GaussianMixturePolicy(Mlp, TorchStochasticPolicy):
             action_dim,
             std=None,
             init_w=1e-3,
-            min_log_std=None,
-            max_log_std=None,
+            min_log_std=LOG_SIG_MIN,
+            max_log_std=LOG_SIG_MAX,
             num_gaussians=1,
             std_architecture="shared",
             **kwargs
@@ -278,7 +393,7 @@ class GaussianMixturePolicy(Mlp, TorchStochasticPolicy):
             input_size=obs_dim,
             output_size=action_dim * num_gaussians,
             init_w=init_w,
-            # output_activation=torch.tanh,
+            output_activation=torch.tanh,
             **kwargs
         )
         self.action_dim = action_dim

@@ -24,7 +24,6 @@ import gym
 import gym_activesearchrl
 import torch
 
-
 def experiment(variant):
 # #    expl_env = NormalizedBoxEnv(HalfCheetahEnv())
 #     expl_env = NormalizedBoxEnv(gym.make('Walker2d-v2'))

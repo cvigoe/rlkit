@@ -200,14 +200,26 @@ class GaussianMixture(Distribution):
         self.categorical = OneHotCategorical(self.weights[:, :, 0])
 
     def log_prob(self, value, ):
+        # log_p = [self.normals[i].log_prob(value) for i in range(self.num_gaussians)]
+        # log_p = torch.stack(log_p, -1)
+        # # log_p = log_p.sum(dim=1)
+        # log_weights = torch.log(self.weights[:, :, 0])
+        # lp = log_weights + log_p
+        # m = lp.max(dim=1)[0]  # log-sum-exp numerical stability trick
+        # log_p_mixture = m + torch.log(torch.exp(lp.sum(dim=1) - m))
+
+        
         log_p = [self.normals[i].log_prob(value) for i in range(self.num_gaussians)]
         log_p = torch.stack(log_p, -1)
-        log_p = log_p.sum(dim=1)
-        log_weights = torch.log(self.weights[:, :, 0])
-        lp = log_weights + log_p
-        m = lp.max(dim=1)[0]  # log-sum-exp numerical stability trick
-        log_p_mixture = m + torch.log(torch.exp(lp - m).sum(dim=1))
-        return log_p_mixture
+        p = torch.exp(log_p)
+        weights = self.weights[:, :, 0]
+
+        p = p * weights
+        p = p.sum(dim=1)
+
+        log_p = torch.log(p)
+
+        return log_p
 
     def sample(self):
         z = self.normal.sample().detach()
